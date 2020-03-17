@@ -1,0 +1,13 @@
+name = "Filtering"
+uuid = "4b4da83c-b4d4-4d36-9685-3d59267330d3"
+authors = ["Manuel Stapper <manuel.stapper@googlemail.com>"]
+version = "0.1.0"
+
+[compat]
+julia = "0.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
