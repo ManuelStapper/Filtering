@@ -11,7 +11,7 @@ function fitdims(H, R, F, Q, A = missing, z = missing)
     if !issymmetric(R)
         error("R must be a symmetric matrix.")
     else
-        if det(R) <= 0
+        if !isposdef(R)
             error("R must be positive definite.")
         end
     end
@@ -23,9 +23,9 @@ function fitdims(H, R, F, Q, A = missing, z = missing)
     end
 
     if !issymmetric(Q)
-        error("Q must be a symmetric matrix.")
+        # error("Q must be a symmetric matrix.")
     else
-        if det(Q) <= 0
+        if !isposdef(Q)
             error("Q must be positive definite.")
         end
     end

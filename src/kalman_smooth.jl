@@ -1,4 +1,4 @@
-function kalman_filter(y,
+function kalman_smooth(y,
     H, R, F, Q,
     A = missing,
     z = missing,
@@ -93,7 +93,6 @@ function kalman_filter(y,
             println("Marginal variance for P0 failed, changed to unit variance.")
             vec(diagm(nx))
         end
-
         P0 = reshape(vecP0, (nx, nx))
     end
 
@@ -128,5 +127,33 @@ function kalman_filter(y,
         PFilt[:, :, t] = PPred[:, :, t] .- K[:, :, t]*H*PPred[:, :, t]
     end
 
-    return xFilt, PFilt
+    # Start smoothing
+    xSmooth = copy(xFilt)
+    PSmooth = copy(PFilt)
+    J = zeros(nx, nx, T)
+    for t = 1:T-1
+        J[:, :, t] = (PFilt[:, :, t]*F')/PPred[:, :, t+1]
+    end
+    J[:, :, T] = (PFilt[:, :, T]*F')/(F*PFilt[:, :, T]*F' .+ Q)
+
+    # Pcross[:, :, t] = P_{t, t-1|T}
+    Pcross = zeros(nx, nx, T)
+    Pcross[:, :, T] = (diagm(ones(nx)) .- K[:, :, T]*H)*F*PFilt[:, :, T-1]
+
+    for t = T-1:-1:2
+        PSmooth[:, :, t] = PFilt[:, :, t] .+ J[:, :, t]*(PSmooth[:, :, t+1] .- PPred[:, :, t+1])*J[:, :, t]'
+        xSmooth[:, t] = xFilt[:, t] .+ J[:, :, t]*(xSmooth[:, t+1] .- F*xFilt[:, t])
+
+        Pcross[:, :, t] = PFilt[:, :, t]*J[:, :, t-1]' .+ J[:, :, t]*(Pcross[:, :, t+1] .- F*PFilt[:, :, t])*J[:, :, t-1]'
+    end
+
+    # Close recursion
+    PSmooth[:, :, 1] = PFilt[:, :, 1] .+ J[:, :, 1]*(PSmooth[:, :, 2] .- PPred[:, :, 2])*J[:, :, 1]'
+    xSmooth[:, 1] = xFilt[:, 1] .+ J[:, :, 1]*(xSmooth[:, 2] .- F*xFilt[:, 1])
+
+    J0 = (P0*F')/PPred[:, :, 1]
+    P0Smooth = P0 .+ J0*(PSmooth[:, :, 1] .- PPred[:, :, 1])*(J0')
+    x0Smooth = x0 .+ J0*(xSmooth[:, 1] .- F*x0)
+
+    return xFilt, PFilt, xSmooth, PSmooth, Pcross, x0Smooth, P0Smooth
 end
